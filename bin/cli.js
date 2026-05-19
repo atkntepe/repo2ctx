@@ -109,10 +109,11 @@ try {
 const program = new Command();
 const ALLOWED_FORMATS = new Set(['text', 'markdown', 'xml', 'json']);
 const invokedName = path.basename(process.argv[1] || 'repo2ctx');
+const normalizedInvokedName = invokedName.toLowerCase().replace(/\.(cmd|ps1|exe)$/u, '');
 
 // Set up program info
 program
-  .name(invokedName === 'dir2txt' ? 'dir2txt' : 'repo2ctx')
+  .name(normalizedInvokedName.startsWith('dir2txt') ? 'dir2txt' : 'repo2ctx')
   .description(packageInfo.description || 'Prepare repository context for AI coding agents')
   .version(packageInfo.version || '1.0.0');
 

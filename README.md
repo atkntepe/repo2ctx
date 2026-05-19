@@ -61,16 +61,13 @@ npx repo2ctx --help
 
 ## 🏃 Quick Start
 
-### Pivot Command Model
-These commands show the repo2ctx workflow being introduced across the pivot. `pack` is available now; `brief`, `map`, `context`, and `agents` are coming in later tasks.
-
 ```bash
-repo2ctx brief
-repo2ctx map
+repo2ctx pack --dry
 repo2ctx pack --format markdown --output repo-context.md
-repo2ctx context "fix watcher test failures"
-repo2ctx agents
+dir2txt run --dry
 ```
+
+Upcoming pivot workflow commands: `brief`, `map`, `context`, and `agents`.
 
 ### Basic Usage
 ```bash
