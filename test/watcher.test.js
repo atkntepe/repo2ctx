@@ -337,6 +337,23 @@ console.log(data);
       await watcher.handleFileChange('unlink', path.join(testDir, 'old.js'), testDir);
       
       expect(watcher.watchStats.totalChanges).toBe(3);
+      await watcher.stopWatching();
+    });
+
+    test('should cancel pending debounce timers when stopped without active watchers', async () => {
+      watcher = new FileWatcher({
+        silent: true,
+        debounce: 50
+      });
+
+      const generateOutputSpy = jest.fn();
+      watcher.generateOutput = generateOutputSpy;
+
+      await watcher.handleFileChange('change', path.join(testDir, 'test1.js'), testDir);
+      await watcher.stopWatching();
+      await new Promise(resolve => setTimeout(resolve, 75));
+
+      expect(generateOutputSpy).not.toHaveBeenCalled();
     });
   });
 
