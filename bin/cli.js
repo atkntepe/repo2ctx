@@ -94,6 +94,7 @@ import {
 } from '../lib/relationships.js';
 import { buildBrief } from '../lib/context/brief.js';
 import { buildMap } from '../lib/context/map.js';
+import { buildTaskContext } from '../lib/context/task.js';
 import { buildAgentDocs, writeAgentDocs } from '../lib/agents/generate.js';
 
 // Get package.json for version info
@@ -517,6 +518,34 @@ program
       process.stdout.write(markdown);
     } catch (error) {
       console.error('❌ Error generating map:', error.message);
+      if (process.env.DEBUG) {
+        console.error(error.stack);
+      }
+      process.exit(1);
+    }
+  });
+
+/**
+ * Context command - generates task-focused repository context
+ */
+program
+  .command('context <task>')
+  .description('Generate task-focused context for an AI coding agent')
+  .option('--output <file>', 'Output to file instead of stdout')
+  .action(async (task, options) => {
+    try {
+      const { markdown } = await buildTaskContext(task);
+
+      if (options.output) {
+        const outputPath = path.resolve(options.output);
+        await fs.mkdir(path.dirname(outputPath), { recursive: true });
+        await fs.writeFile(outputPath, markdown, 'utf8');
+        return;
+      }
+
+      process.stdout.write(markdown);
+    } catch (error) {
+      console.error('❌ Error generating task context:', error.message);
       if (process.env.DEBUG) {
         console.error(error.stack);
       }
