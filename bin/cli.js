@@ -93,6 +93,7 @@ import {
   generateDependencyGraph 
 } from '../lib/relationships.js';
 import { buildBrief } from '../lib/context/brief.js';
+import { buildMap } from '../lib/context/map.js';
 
 // Get package.json for version info
 const __filename = fileURLToPath(import.meta.url);
@@ -487,6 +488,34 @@ program
       process.stdout.write(markdown);
     } catch (error) {
       console.error('❌ Error generating brief:', error.message);
+      if (process.env.DEBUG) {
+        console.error(error.stack);
+      }
+      process.exit(1);
+    }
+  });
+
+/**
+ * Map command - generates compact repository navigation map
+ */
+program
+  .command('map')
+  .description('Generate a compact repository navigation map')
+  .option('--output <file>', 'Output to file instead of stdout')
+  .action(async (options) => {
+    try {
+      const { markdown } = await buildMap();
+
+      if (options.output) {
+        const outputPath = path.resolve(options.output);
+        await fs.mkdir(path.dirname(outputPath), { recursive: true });
+        await fs.writeFile(outputPath, markdown, 'utf8');
+        return;
+      }
+
+      process.stdout.write(markdown);
+    } catch (error) {
+      console.error('❌ Error generating map:', error.message);
       if (process.env.DEBUG) {
         console.error(error.stack);
       }
