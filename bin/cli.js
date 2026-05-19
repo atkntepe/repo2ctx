@@ -94,6 +94,7 @@ import {
 } from '../lib/relationships.js';
 import { buildBrief } from '../lib/context/brief.js';
 import { buildMap } from '../lib/context/map.js';
+import { buildAgentDocs } from '../lib/agents/generate.js';
 
 // Get package.json for version info
 const __filename = fileURLToPath(import.meta.url);
@@ -516,6 +517,37 @@ program
       process.stdout.write(markdown);
     } catch (error) {
       console.error('❌ Error generating map:', error.message);
+      if (process.env.DEBUG) {
+        console.error(error.stack);
+      }
+      process.exit(1);
+    }
+  });
+
+/**
+ * Agents command - generates repository guidance files for coding agents
+ */
+program
+  .command('agents')
+  .description('Generate AGENTS.md repository guidance for coding agents')
+  .option('--claude', 'Also write CLAUDE.md wrapper that references AGENTS.md')
+  .option('--dry', 'Print AGENTS.md instead of writing files')
+  .action(async (options) => {
+    try {
+      const { agents, claude } = await buildAgentDocs();
+
+      if (options.dry) {
+        process.stdout.write(agents);
+        return;
+      }
+
+      await fs.writeFile(path.join(process.cwd(), 'AGENTS.md'), agents, 'utf8');
+
+      if (options.claude) {
+        await fs.writeFile(path.join(process.cwd(), 'CLAUDE.md'), claude, 'utf8');
+      }
+    } catch (error) {
+      console.error('❌ Error generating agent docs:', error.message);
       if (process.env.DEBUG) {
         console.error(error.stack);
       }
