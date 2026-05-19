@@ -1,5 +1,5 @@
 import { jest } from '@jest/globals';
-import { generateFileTreeForTest, getLanguageFromExtensionForTest } from '../lib/generate.js';
+import { generateFileTree, getLanguageFromExtension } from '../lib/generate.js';
 
 const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
 const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
@@ -11,7 +11,7 @@ afterAll(() => {
 
 describe('Generate Module', () => {
   test('generates a stable tree for nested files', () => {
-    const tree = generateFileTreeForTest([
+    const tree = generateFileTree([
       'package.json',
       'src/index.js',
       'src/utils/format.js'
@@ -25,9 +25,9 @@ describe('Generate Module', () => {
   });
 
   test('detects markdown code block languages by extension', () => {
-    expect(getLanguageFromExtensionForTest('app.js')).toBe('javascript');
-    expect(getLanguageFromExtensionForTest('types.ts')).toBe('typescript');
-    expect(getLanguageFromExtensionForTest('README.md')).toBe('markdown');
-    expect(getLanguageFromExtensionForTest('unknown.custom')).toBe('');
+    expect(getLanguageFromExtension('app.js')).toBe('javascript');
+    expect(getLanguageFromExtension('types.ts')).toBe('typescript');
+    expect(getLanguageFromExtension('README.md')).toBe('markdown');
+    expect(getLanguageFromExtension('unknown.custom')).toBe('');
   });
 });

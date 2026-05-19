@@ -355,6 +355,38 @@ console.log(data);
 
       expect(generateOutputSpy).not.toHaveBeenCalled();
     });
+
+    test('should wait for running debounced work when stopping a specific path', async () => {
+      watcher = new FileWatcher({
+        silent: true,
+        debounce: 10
+      });
+
+      let finishProcessing;
+      const closeSpy = jest.fn(() => Promise.resolve());
+      watcher.watchers.set(testDir, { close: closeSpy });
+      watcher.processChanges = jest.fn(() => new Promise(resolve => {
+        finishProcessing = resolve;
+      }));
+
+      await watcher.handleFileChange('change', path.join(testDir, 'test1.js'), testDir);
+      await new Promise(resolve => setTimeout(resolve, 25));
+
+      let stopCompleted = false;
+      const stopPromise = watcher.stopWatching(testDir).then(() => {
+        stopCompleted = true;
+      });
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      expect(watcher.processChanges).toHaveBeenCalledTimes(1);
+      expect(closeSpy).toHaveBeenCalledTimes(1);
+      expect(stopCompleted).toBe(false);
+
+      finishProcessing();
+      await stopPromise;
+
+      expect(stopCompleted).toBe(true);
+    });
   });
 
   describe('error handling', () => {
