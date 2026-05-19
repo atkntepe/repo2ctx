@@ -1,9 +1,10 @@
 {
-  "name": "dir2txt",
-  "version": "0.2.0",
-  "description": "Convert project directory structure and files to LLM-friendly text format",
+  "name": "repo2ctx",
+  "version": "1.0.0",
+  "description": "Prepare safe, task-focused repository context for AI coding agents",
   "main": "bin/cli.js",
   "bin": {
+    "repo2ctx": "./bin/cli.js",
     "dir2txt": "./bin/cli.js"
   },
   "scripts": {

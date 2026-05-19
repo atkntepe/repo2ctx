@@ -1,6 +1,8 @@
-# dir2txt
+# repo2ctx
 
-A powerful CLI tool that converts your project's directory structure and file contents into clean, LLM-friendly text format. Perfect for sharing codebases with AI assistants, creating documentation, or analyzing project structures.
+Prepare safe, task-focused repository context for AI coding agents.
+
+> Formerly `dir2txt`. The `dir2txt` binary remains available as a compatibility alias.
 
 ## ✨ Key Features
 
@@ -48,30 +50,41 @@ A powerful CLI tool that converts your project's directory structure and file co
 
 ### Global Installation (Recommended)
 ```bash
-npm install -g dir2txt
+npm install -g repo2ctx
 ```
 
 ### Local Installation
 ```bash
-npm install dir2txt
-npx dir2txt --help
+npm install repo2ctx
+npx repo2ctx --help
 ```
 
 ## 🏃 Quick Start
 
+### Pivot Command Model
+These commands show the repo2ctx workflow being introduced across the pivot. `pack` is available now; `brief`, `map`, `context`, and `agents` are coming in later tasks.
+
+```bash
+repo2ctx brief
+repo2ctx map
+repo2ctx pack --format markdown --output repo-context.md
+repo2ctx context "fix watcher test failures"
+repo2ctx agents
+```
+
 ### Basic Usage
 ```bash
 # Generate text to directory-output.txt (default)
-dir2txt run
+repo2ctx run
 
 # Copy directly to clipboard for AI tools
-dir2txt run --clipboard
+repo2ctx run --clipboard
 
 # Only show directory structure (no file content)
-dir2txt run --dry
+repo2ctx run --dry
 
 # Generate in markdown format  
-dir2txt run --markdown --output docs/codebase.md
+repo2ctx run --markdown --output docs/codebase.md
 ```
 
 ### Smart Analysis Features

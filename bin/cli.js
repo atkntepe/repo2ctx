@@ -103,16 +103,17 @@ try {
   const packageData = await fs.readFile(packagePath, 'utf8');
   packageInfo = JSON.parse(packageData);
 } catch (error) {
-  packageInfo = { version: '1.0.0', description: 'Convert directory structure to text' };
+  packageInfo = { version: '1.0.0', description: 'Prepare repository context for AI coding agents' };
 }
 
 const program = new Command();
 const ALLOWED_FORMATS = new Set(['text', 'markdown', 'xml', 'json']);
+const invokedName = path.basename(process.argv[1] || 'repo2ctx');
 
 // Set up program info
 program
-  .name('dir2txt')
-  .description(packageInfo.description || 'Convert project directory structure and files to text for LLMs')
+  .name(invokedName === 'dir2txt' ? 'dir2txt' : 'repo2ctx')
+  .description(packageInfo.description || 'Prepare repository context for AI coding agents')
   .version(packageInfo.version || '1.0.0');
 
 function applyGenerationOptions(command) {
@@ -171,7 +172,7 @@ async function runDirectoryGeneration(options, command) {
           })()
         : () => {};
 
-      console.log('🔍 Starting dir2txt...');
+      console.log(`🔍 Starting ${program.name()}...`);
       
       // Load configuration unless --noconfig is specified
       let config = {};
