@@ -17,7 +17,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/atkntepe/dir2txt.git"
+    "url": "git+https://github.com/atkntepe/repo2ctx.git"
   },
   "keywords": [
     "cli",
@@ -44,9 +44,9 @@
   "license": "ISC",
   "type": "module",
   "bugs": {
-    "url": "https://github.com/atkntepe/dir2txt/issues"
+    "url": "https://github.com/atkntepe/repo2ctx/issues"
   },
-  "homepage": "https://github.com/atkntepe/dir2txt#readme",
+  "homepage": "https://github.com/atkntepe/repo2ctx#readme",
   "dependencies": {
     "chokidar": "^4.0.0",
     "clipboardy": "^4.0.0",
