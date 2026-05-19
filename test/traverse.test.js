@@ -47,4 +47,13 @@ describe('Traverse Module', () => {
 
     expect(files).toEqual([path.join('src', 'index.js')]);
   });
+
+  test('supports explicit cwd without changing process cwd', async () => {
+    process.chdir(originalCwd);
+
+    const files = await getFiles({ includeExtensions: ['.js'] }, testDir);
+
+    expect(process.cwd()).toBe(originalCwd);
+    expect(files).toEqual([path.join('src', 'index.js')]);
+  });
 });
