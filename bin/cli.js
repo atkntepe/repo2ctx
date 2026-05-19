@@ -529,12 +529,13 @@ program
  * Context command - generates task-focused repository context
  */
 program
-  .command('context <task>')
+  .command('context <task...>')
   .description('Generate task-focused context for an AI coding agent')
   .option('--output <file>', 'Output to file instead of stdout')
   .action(async (task, options) => {
     try {
-      const { markdown } = await buildTaskContext(task);
+      const taskDescription = Array.isArray(task) ? task.join(' ') : task;
+      const { markdown } = await buildTaskContext(taskDescription);
 
       if (options.output) {
         const outputPath = path.resolve(options.output);

@@ -37,6 +37,26 @@ describe('task context builder', () => {
     expect(selectedFiles).toContain('package.json');
   });
 
+  test('preserves project context and relevant tests under maxFiles pressure', () => {
+    const files = [
+      'lib/watcher-alpha.js',
+      'lib/watcher-beta.js',
+      'lib/watcher-gamma.js',
+      'lib/watcher-delta.js',
+      'lib/watcher-epsilon.js',
+      'lib/watcher-zeta.js',
+      'package.json',
+      'test/watcher.test.js'
+    ];
+
+    const selected = selectTaskFiles('fix watcher tests', files, { maxFiles: 5 });
+    const selectedFiles = selected.map(item => item.file);
+
+    expect(selected).toHaveLength(5);
+    expect(selectedFiles).toContain('package.json');
+    expect(selectedFiles).toContain('test/watcher.test.js');
+  });
+
   test('renders why files were selected', () => {
     const markdown = buildTaskContextMarkdown('fix watcher tests', [
       { file: 'lib/watcher.js', reason: 'matched task term "watcher"' }
@@ -83,5 +103,7 @@ describe('task context builder', () => {
     ]));
     expect(markdown).toContain('- `src/watcher.js`: matched task term "watcher"');
     expect(markdown).toContain('- `test/watcher.test.js`: matched task term "watcher"');
+    expect(markdown).toContain('- Tests detected: yes');
+    expect(markdown).toContain('- javascript');
   });
 });
