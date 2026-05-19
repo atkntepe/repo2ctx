@@ -114,41 +114,45 @@ program
   .description(packageInfo.description || 'Convert project directory structure and files to text for LLMs')
   .version(packageInfo.version || '1.0.0');
 
-/**
- * Main run command - generates text output from directory
- */
-program
-  .command('run')
-  .description('Generate text from directory structure and files')
-  .option('--dry', 'Only show file tree, no file contents')
-  .option('--output <file>', 'Output to file instead of stdout')
-  .option('--clipboard', 'Copy output to clipboard')
-  .option('--max-size <bytes>', 'Maximum file size in bytes', parseInt)
-  .option('--noconfig', 'Ignore .dir2txt.json config file')
-  .option('--markdown', 'Output in markdown format')
-  .option('--preview <count>', 'Show preview with first N files', parseInt)
-  .option('--extensions <ext...>', 'Only include files with these extensions (e.g., .js .ts)')
-  .option('--ignore <patterns...>', 'Additional ignore patterns (e.g., "*.test.js" "temp/**")')
-  .option('--max-depth <depth>', 'Maximum directory depth to traverse', parseInt)
-  .option('--search <pattern>', 'Search for pattern within file contents')
-  .option('--regex', 'Treat search pattern as regular expression')
-  .option('--case-sensitive', 'Make search case sensitive')
-  .option('--context <lines>', 'Show N lines of context around matches', parseInt)
-  .option('--since <date>', 'Include only files modified since date (YYYY-MM-DD)')
-  .option('--before <date>', 'Include only files modified before date (YYYY-MM-DD)')
-  .option('--content-filter <pattern>', 'Include only files containing pattern')
-  .option('--find-todos', 'Search for TODO, FIXME, and similar patterns')
-  .option('--find-functions', 'Search for function definitions and patterns')
-  .option('--include-relationships', 'Include import/export relationships between files')
-  .option('--file-summaries', 'Add pattern-based purpose summaries for each file')
-  .option('--include-dependencies', 'Show dependency graph and file relationships')
-  .option('--group-by-feature', 'Group files by functionality/module instead of directory')
-  .option('--incremental', 'Only process changed files using cache')
-  .option('--cache-dir <path>', 'Cache directory path (default: .dir2txt-cache)')
-  .option('--show-changes', 'Show what files changed since last run')
-  .option('--highlight-new', 'Highlight new files in output')
-  .option('--clear-cache', 'Clear cache before processing')
-  .action(async (options) => {
+function applyGenerationOptions(command) {
+  return command
+    .option('--dry', 'Only show file tree, no file contents')
+    .option('--output <file>', 'Output to file instead of stdout')
+    .option('--clipboard', 'Copy output to clipboard')
+    .option('--max-size <bytes>', 'Maximum file size in bytes', parseInt)
+    .option('--noconfig', 'Ignore .dir2txt.json config file')
+    .option('--markdown', 'Output in markdown format')
+    .option('--format <format>', 'Output format: text, markdown, json, or xml', 'text')
+    .option('--redact', 'Redact sensitive file content', true)
+    .option('--preview <count>', 'Show preview with first N files', parseInt)
+    .option('--extensions <ext...>', 'Only include files with these extensions (e.g., .js .ts)')
+    .option('--ignore <patterns...>', 'Additional ignore patterns (e.g., "*.test.js" "temp/**")')
+    .option('--max-depth <depth>', 'Maximum directory depth to traverse', parseInt)
+    .option('--search <pattern>', 'Search for pattern within file contents')
+    .option('--regex', 'Treat search pattern as regular expression')
+    .option('--case-sensitive', 'Make search case sensitive')
+    .option('--context <lines>', 'Show N lines of context around matches', parseInt)
+    .option('--since <date>', 'Include only files modified since date (YYYY-MM-DD)')
+    .option('--before <date>', 'Include only files modified before date (YYYY-MM-DD)')
+    .option('--content-filter <pattern>', 'Include only files containing pattern')
+    .option('--find-todos', 'Search for TODO, FIXME, and similar patterns')
+    .option('--find-functions', 'Search for function definitions and patterns')
+    .option('--include-relationships', 'Include import/export relationships between files')
+    .option('--file-summaries', 'Add pattern-based purpose summaries for each file')
+    .option('--include-dependencies', 'Show dependency graph and file relationships')
+    .option('--group-by-feature', 'Group files by functionality/module instead of directory')
+    .option('--incremental', 'Only process changed files using cache')
+    .option('--cache-dir <path>', 'Cache directory path (default: .dir2txt-cache)')
+    .option('--show-changes', 'Show what files changed since last run')
+    .option('--highlight-new', 'Highlight new files in output')
+    .option('--clear-cache', 'Clear cache before processing');
+}
+
+async function runDirectoryGeneration(options) {
+    if (options.markdown) {
+      options.format = 'markdown';
+    }
+
     try {
       console.log('🔍 Starting dir2txt...');
       
@@ -376,6 +380,8 @@ program
         outputFile: outputFile,
         clipboard: options.clipboard,
         markdown: options.markdown,
+        format: options.format,
+        redact: options.redact,
         concurrency: 10,
         // Relationship analysis options
         includeRelationships: options.includeRelationships,
@@ -417,7 +423,25 @@ program
       }
       process.exit(1);
     }
-  });
+}
+
+/**
+ * Main run command - generates text output from directory
+ */
+applyGenerationOptions(
+  program
+    .command('run')
+    .description('Generate text from directory structure and files')
+).action(runDirectoryGeneration);
+
+/**
+ * Pack command - modern alias for run output generation
+ */
+applyGenerationOptions(
+  program
+    .command('pack')
+    .description('Pack directory structure and files for LLM context')
+).action(runDirectoryGeneration);
 
 /**
  * Config command - creates default configuration

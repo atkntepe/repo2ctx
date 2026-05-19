@@ -1,5 +1,6 @@
 import { jest } from '@jest/globals';
 import { generateFileTree, getLanguageFromExtension } from '../lib/generate.js';
+import { renderSection } from '../lib/output/renderers.js';
 
 const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
 const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
@@ -29,5 +30,11 @@ describe('Generate Module', () => {
     expect(getLanguageFromExtension('types.ts')).toBe('typescript');
     expect(getLanguageFromExtension('README.md')).toBe('markdown');
     expect(getLanguageFromExtension('unknown.custom')).toBe('');
+  });
+
+  test('renders XML sections with escaped content', () => {
+    const output = renderSection('file', 'a < b', { format: 'xml', attributes: { path: 'src/a.js' } });
+
+    expect(output).toBe('<file path="src/a.js">a &lt; b</file>\n');
   });
 });
