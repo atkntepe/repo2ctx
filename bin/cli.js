@@ -94,7 +94,7 @@ import {
 } from '../lib/relationships.js';
 import { buildBrief } from '../lib/context/brief.js';
 import { buildMap } from '../lib/context/map.js';
-import { buildAgentDocs } from '../lib/agents/generate.js';
+import { buildAgentDocs, writeAgentDocs } from '../lib/agents/generate.js';
 
 // Get package.json for version info
 const __filename = fileURLToPath(import.meta.url);
@@ -532,20 +532,20 @@ program
   .description('Generate AGENTS.md repository guidance for coding agents')
   .option('--claude', 'Also write CLAUDE.md wrapper that references AGENTS.md')
   .option('--dry', 'Print AGENTS.md instead of writing files')
+  .option('--force', 'Overwrite existing AGENTS.md or CLAUDE.md files')
   .action(async (options) => {
     try {
-      const { agents, claude } = await buildAgentDocs();
+      const docs = await buildAgentDocs();
 
       if (options.dry) {
-        process.stdout.write(agents);
+        process.stdout.write(docs.agents);
         return;
       }
 
-      await fs.writeFile(path.join(process.cwd(), 'AGENTS.md'), agents, 'utf8');
-
-      if (options.claude) {
-        await fs.writeFile(path.join(process.cwd(), 'CLAUDE.md'), claude, 'utf8');
-      }
+      await writeAgentDocs(process.cwd(), docs, {
+        claude: options.claude,
+        force: options.force
+      });
     } catch (error) {
       console.error('❌ Error generating agent docs:', error.message);
       if (process.env.DEBUG) {
