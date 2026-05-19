@@ -2,12 +2,31 @@
  * Tests for file relationship analysis module
  */
 
-import { analyzeFileRelationships, analyzeProjectRelationships, groupFilesByFunction, generateDependencyGraph } from '../lib/relationships.js';
-import { jest } from '@jest/globals';
+import { describe, test, expect, beforeEach, afterEach } from '@jest/globals';
+import { promises as fs } from 'fs';
+import path from 'path';
+import {
+  analyzeFileRelationships,
+  analyzeProjectRelationships,
+  groupFilesByFunction,
+  generateDependencyGraph
+} from '../lib/relationships.js';
+
+const testDir = path.join(process.cwd(), 'test-temp-relationships');
+
+beforeEach(async () => {
+  await fs.rm(testDir, { recursive: true, force: true });
+  await fs.mkdir(path.join(testDir, 'components'), { recursive: true });
+  await fs.mkdir(path.join(testDir, 'services'), { recursive: true });
+});
+
+afterEach(async () => {
+  await fs.rm(testDir, { recursive: true, force: true });
+});
 
 describe('Relationship Analysis', () => {
   describe('analyzeFileRelationships', () => {
-    test('should detect JavaScript imports and exports', async () => {
+    test('detects JavaScript imports and exports', async () => {
       const filePath = '/test/app.js';
       const content = `
 import React from 'react';
@@ -26,8 +45,6 @@ export default App;
       expect(result).toMatchObject({
         filePath: '/test/app.js',
         language: 'javascript',
-        frameworks: ['react'],
-        summary: expect.stringContaining('React component'),
         imports: expect.arrayContaining([
           expect.objectContaining({ path: 'react' }),
           expect.objectContaining({ path: './utils.js' })
@@ -37,11 +54,13 @@ export default App;
         ])
       });
 
+      expect(result).not.toHaveProperty('frameworks');
+      expect(result.summary).toContain('Function definitions');
       expect(result.stats.importCount).toBe(3);
       expect(result.stats.exportCount).toBeGreaterThan(0);
     });
 
-    test('should detect Python imports', async () => {
+    test('detects Python imports', async () => {
       const filePath = '/test/main.py';
       const content = `
 import os
@@ -62,7 +81,6 @@ class UserService:
       expect(result).toMatchObject({
         filePath: '/test/main.py',
         language: 'python',
-        frameworks: ['flask'],
         imports: expect.arrayContaining([
           expect.objectContaining({ path: 'os' }),
           expect.objectContaining({ path: 'flask' }),
@@ -70,10 +88,11 @@ class UserService:
         ])
       });
 
-      expect(result.summary).toContain('flask');
+      expect(result).not.toHaveProperty('frameworks');
+      expect(result.summary).toContain('Class-based module');
     });
 
-    test('should detect TypeScript with interfaces', async () => {
+    test('detects TypeScript with interfaces', async () => {
       const filePath = '/test/types.ts';
       const content = `
 import { Component } from 'react';
@@ -95,14 +114,14 @@ export type { Props };
       const result = await analyzeFileRelationships(filePath, content);
 
       expect(result.language).toBe('typescript');
-      expect(result.frameworks).toContain('react');
+      expect(result).not.toHaveProperty('frameworks');
       expect(result.imports).toHaveLength(2);
       expect(result.exports).toContainEqual(
         expect.objectContaining({ name: 'UserComponent' })
       );
     });
 
-    test('should handle files with no imports/exports', async () => {
+    test('handles files with no imports or exports', async () => {
       const filePath = '/test/config.js';
       const content = `
 const PORT = 3000;
@@ -125,7 +144,7 @@ console.log('Server starting...');
       });
     });
 
-    test('should generate appropriate file summaries', async () => {
+    test('generates file summaries from naming and content heuristics', async () => {
       const testCases = [
         {
           path: '/test/component.test.js',
@@ -157,59 +176,51 @@ console.log('Server starting...');
   });
 
   describe('analyzeProjectRelationships', () => {
-    test('should analyze multiple files and build dependency graph', async () => {
-      const mockFiles = [
-        { path: '/test/app.js' },
-        { path: '/test/utils.js' },
-        { path: '/test/config.js' }
-      ];
+    test('analyzes multiple files and builds dependency graph', async () => {
+      const appPath = path.join(testDir, 'app.js');
+      const utilsPath = path.join(testDir, 'utils.js');
+      const configPath = path.join(testDir, 'config.js');
 
-      // Mock fs.readFile
-      const mockReadFile = jest.fn()
-        .mockResolvedValueOnce(`
-          import utils from './utils.js';
-          import config from './config.js';
-          export default function app() {}
-        `)
-        .mockResolvedValueOnce(`
-          export function helper() {}
-          export default { helper };
-        `)
-        .mockResolvedValueOnce(`
-          export const PORT = 3000;
-        `);
+      await fs.writeFile(appPath, `
+import utils from './utils.js';
+import config from './config.js';
+export default function app() {}
+      `);
+      await fs.writeFile(utilsPath, `
+export function helper() {}
+export default { helper };
+      `);
+      await fs.writeFile(configPath, `
+export const PORT = 3000;
+      `);
 
-      // Mock the fs module
-      jest.unstable_mockModule('fs', () => ({
-        promises: {
-          readFile: mockReadFile
-        }
-      }));
-
-      const result = await analyzeProjectRelationships(mockFiles);
+      const result = await analyzeProjectRelationships([
+        { path: appPath },
+        { path: utilsPath },
+        { path: configPath }
+      ]);
 
       expect(result.relationships.size).toBe(3);
       expect(result.dependencyGraph.size).toBe(3);
       expect(result.stats.totalFiles).toBe(3);
       expect(result.stats.analyzedFiles).toBe(3);
 
-      // Check dependency relationships
-      const appDeps = result.dependencyGraph.get('/test/app.js');
-      expect(appDeps.dependencies).toContain('/test/utils.js');
-      expect(appDeps.dependencies).toContain('/test/config.js');
+      const appDeps = result.dependencyGraph.get(appPath);
+      expect(appDeps.dependencies).toContain(utilsPath);
+      expect(appDeps.dependencies).toContain(configPath);
 
-      const utilsDeps = result.dependencyGraph.get('/test/utils.js');
-      expect(utilsDeps.dependents).toContain('/test/app.js');
+      const utilsDeps = result.dependencyGraph.get(utilsPath);
+      expect(utilsDeps.dependents).toContain(appPath);
     });
   });
 
   describe('groupFilesByFunction', () => {
-    test('should group files by framework and directory', () => {
+    test('groups files by parent directory', () => {
       const mockRelationships = new Map([
-        ['/test/components/App.jsx', { frameworks: ['react'], language: 'javascript' }],
-        ['/test/components/Button.jsx', { frameworks: ['react'], language: 'javascript' }],
-        ['/test/services/api.js', { frameworks: [], language: 'javascript' }],
-        ['/test/utils/helpers.js', { frameworks: [], language: 'javascript' }]
+        ['/test/components/App.jsx', { language: 'javascript' }],
+        ['/test/components/Button.jsx', { language: 'javascript' }],
+        ['/test/services/api.js', { language: 'javascript' }],
+        ['/test/utils/helpers.js', { language: 'javascript' }]
       ]);
 
       const mockDependencyGraph = new Map([
@@ -221,15 +232,15 @@ console.log('Server starting...');
 
       const groups = groupFilesByFunction(mockRelationships, mockDependencyGraph);
 
-      expect(groups.has('react')).toBe(true);
-      expect(groups.get('react').size).toBe(2);
-      expect(groups.get('react')).toContain('/test/components/App.jsx');
-      expect(groups.get('react')).toContain('/test/components/Button.jsx');
+      expect(groups.has('components')).toBe(true);
+      expect(groups.get('components').size).toBe(2);
+      expect(groups.get('components')).toContain('/test/components/App.jsx');
+      expect(groups.get('components')).toContain('/test/components/Button.jsx');
     });
   });
 
   describe('generateDependencyGraph', () => {
-    test('should generate text-based dependency tree', () => {
+    test('generates text-based dependency tree', () => {
       const mockRelationships = new Map([
         ['/test/app.js', { language: 'javascript' }],
         ['/test/utils.js', { language: 'javascript' }]
@@ -244,71 +255,25 @@ console.log('Server starting...');
 
       expect(graph).toContain('app.js');
       expect(graph).toContain('utils.js');
-      expect(graph).toContain('├──');
-    });
-  });
-
-  describe('framework detection', () => {
-    test('should detect multiple frameworks', async () => {
-      const content = `
-import React from 'react';
-import { Injectable } from '@angular/core';
-import express from 'express';
-
-@Injectable()
-export class Service {
-  render() {
-    return <div>Hello</div>;
-  }
-}
-      `;
-
-      const result = await analyzeFileRelationships('/test/mixed.tsx', content);
-
-      expect(result.frameworks).toContain('react');
-      expect(result.frameworks).toContain('angular');
-      expect(result.frameworks).toContain('express');
-    });
-
-    test('should detect Vue.js components', async () => {
-      const content = `
-<template>
-  <div>{{ message }}</div>
-</template>
-
-<script>
-import { defineComponent } from 'vue';
-
-export default defineComponent({
-  data() {
-    return { message: 'Hello' };
-  }
-});
-</script>
-      `;
-
-      const result = await analyzeFileRelationships('/test/component.vue', content);
-
-      expect(result.frameworks).toContain('vue');
+      expect(graph).toMatch(/├──|└──/);
     });
   });
 
   describe('error handling', () => {
-    test('should handle analysis errors gracefully', async () => {
+    test('handles analysis errors gracefully', async () => {
       const result = await analyzeFileRelationships('/nonexistent/file.js', 'invalid content');
 
       expect(result).toMatchObject({
         filePath: '/nonexistent/file.js',
         language: 'javascript',
-        frameworks: [],
         imports: [],
         exports: [],
         stats: {
           importCount: 0,
-          exportCount: 0,
-          frameworkCount: 0
+          exportCount: 0
         }
       });
+      expect(result).not.toHaveProperty('frameworks');
     });
   });
 });

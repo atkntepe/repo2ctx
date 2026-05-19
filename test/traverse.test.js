@@ -1,8 +1,31 @@
 import { jest } from '@jest/globals';
+import { promises as fs } from 'fs';
+import path from 'path';
+import { getFiles } from '../lib/traverse.js';
 
-// Mock console methods
 const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
 const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+const testDir = path.join(process.cwd(), 'test-temp-traverse');
+const originalCwd = process.cwd();
+
+beforeEach(async () => {
+  await fs.rm(testDir, { recursive: true, force: true });
+  await fs.mkdir(path.join(testDir, 'src'), { recursive: true });
+  await fs.mkdir(path.join(testDir, 'node_modules/pkg'), { recursive: true });
+  await fs.writeFile(path.join(testDir, '.gitignore'), 'ignored/**\n**/*.log\n');
+  await fs.writeFile(path.join(testDir, 'package.json'), '{"name":"fixture"}');
+  await fs.writeFile(path.join(testDir, 'src/index.js'), 'console.log("ok");');
+  await fs.writeFile(path.join(testDir, 'src/readme.md'), '# fixture');
+  await fs.writeFile(path.join(testDir, 'debug.log'), 'log');
+  await fs.writeFile(path.join(testDir, 'node_modules/pkg/index.js'), 'module.exports = {};');
+  process.chdir(testDir);
+});
+
+afterEach(async () => {
+  process.chdir(originalCwd);
+  await fs.rm(testDir, { recursive: true, force: true });
+});
 
 afterAll(() => {
   consoleSpy.mockRestore();
@@ -10,49 +33,18 @@ afterAll(() => {
 });
 
 describe('Traverse Module', () => {
-  describe('file filtering', () => {
-    test('should filter by extension correctly', () => {
-      const files = ['test.js', 'test.ts', 'test.py', 'test.txt'];
-      const jsFiles = files.filter(f => f.endsWith('.js'));
-      const tsFiles = files.filter(f => f.endsWith('.ts'));
-      
-      expect(jsFiles).toEqual(['test.js']);
-      expect(tsFiles).toEqual(['test.ts']);
-    });
+  test('respects gitignore and built-in ignored directories', async () => {
+    const files = await getFiles();
 
-    test('should handle empty file list', () => {
-      const files = [];
-      const filtered = files.filter(f => f.endsWith('.js'));
-      
-      expect(filtered).toEqual([]);
-    });
+    expect(files).toContain('package.json');
+    expect(files).toContain(path.join('src', 'index.js'));
+    expect(files).not.toContain('debug.log');
+    expect(files.some(file => file.includes('node_modules'))).toBe(false);
   });
 
-  describe('ignore patterns', () => {
-    test('should recognize common ignore patterns', () => {
-      const patterns = ['node_modules/**', '.git/**', '*.log', 'dist/**'];
-      
-      expect(patterns).toContain('node_modules/**');
-      expect(patterns).toContain('.git/**');
-      expect(patterns.length).toBe(4);
-    });
+  test('filters by extension', async () => {
+    const files = await getFiles({ includeExtensions: ['.js'] });
 
-    test('should handle glob patterns', () => {
-      const pattern = '**/*.test.js';
-      
-      expect(pattern).toContain('*');
-      expect(pattern).toContain('.test.js');
-    });
-  });
-
-  describe('file size filtering', () => {
-    test('should handle size limits', () => {
-      const maxSize = 1024 * 1024; // 1MB
-      const smallSize = 1024; // 1KB
-      const largeSize = 10 * 1024 * 1024; // 10MB
-      
-      expect(smallSize < maxSize).toBe(true);
-      expect(largeSize > maxSize).toBe(true);
-    });
+    expect(files).toEqual([path.join('src', 'index.js')]);
   });
 });
