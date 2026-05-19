@@ -107,6 +107,7 @@ try {
 }
 
 const program = new Command();
+const ALLOWED_FORMATS = new Set(['text', 'markdown', 'xml', 'json']);
 
 // Set up program info
 program
@@ -148,12 +149,28 @@ function applyGenerationOptions(command) {
     .option('--clear-cache', 'Clear cache before processing');
 }
 
-async function runDirectoryGeneration(options) {
-    if (options.markdown) {
+async function runDirectoryGeneration(options, command) {
+    const formatSource = command?.getOptionValueSource?.('format');
+    if (options.markdown && formatSource !== 'cli') {
       options.format = 'markdown';
     }
 
+    let restoreConsoleLog = () => {};
     try {
+      if (!ALLOWED_FORMATS.has(options.format)) {
+        throw new Error(`Invalid format "${options.format}". Allowed formats: text, markdown, xml, json`);
+      }
+
+      restoreConsoleLog = options.format === 'json' || options.format === 'xml'
+        ? (() => {
+            const originalLog = console.log;
+            console.log = (...args) => console.error(...args);
+            return () => {
+              console.log = originalLog;
+            };
+          })()
+        : () => {};
+
       console.log('🔍 Starting dir2txt...');
       
       // Load configuration unless --noconfig is specified
@@ -421,7 +438,10 @@ async function runDirectoryGeneration(options) {
       if (process.env.DEBUG) {
         console.error(error.stack);
       }
+      restoreConsoleLog();
       process.exit(1);
+    } finally {
+      restoreConsoleLog();
     }
 }
 
@@ -432,7 +452,7 @@ applyGenerationOptions(
   program
     .command('run')
     .description('Generate text from directory structure and files')
-).action(runDirectoryGeneration);
+).action((options, command) => runDirectoryGeneration(options, command));
 
 /**
  * Pack command - modern alias for run output generation
@@ -441,7 +461,7 @@ applyGenerationOptions(
   program
     .command('pack')
     .description('Pack directory structure and files for LLM context')
-).action(runDirectoryGeneration);
+).action((options, command) => runDirectoryGeneration(options, command));
 
 /**
  * Config command - creates default configuration
