@@ -1,6 +1,6 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import { buildAgentsMarkdown, buildClaudeMarkdown, writeAgentDocs } from '../lib/agents/generate.js';
+import { buildAgentDocs, buildAgentsMarkdown, buildClaudeMarkdown, writeAgentDocs } from '../lib/agents/generate.js';
 
 const originalCwd = process.cwd();
 const testDir = path.join(originalCwd, 'test-temp-agents-generate');
@@ -18,6 +18,7 @@ describe('Agent Docs Generation', () => {
   test('buildAgentsMarkdown includes project metadata and detected test command', () => {
     const markdown = buildAgentsMarkdown({
       name: 'fixture-app',
+      description: 'A fixture app for agent docs',
       packageManager: 'npm',
       moduleType: 'module',
       scripts: {
@@ -32,6 +33,7 @@ describe('Agent Docs Generation', () => {
 
     expect(markdown).toContain('# AGENTS.md');
     expect(markdown).toContain('fixture-app');
+    expect(markdown).toContain('Description: A fixture app for agent docs');
     expect(markdown).toContain('Test command: `npm test` (`jest`).');
     expect(markdown).not.toContain('TODO');
     expect(markdown).not.toContain('placeholder');
@@ -39,6 +41,33 @@ describe('Agent Docs Generation', () => {
 
   test('buildClaudeMarkdown delegates to AGENTS.md', () => {
     expect(buildClaudeMarkdown()).toContain('@AGENTS.md');
+  });
+
+  test('buildAgentDocs ignores restrictive generation config while detecting project shape', async () => {
+    await fs.mkdir(path.join(testDir, 'src'), { recursive: true });
+    await fs.mkdir(path.join(testDir, 'test'), { recursive: true });
+    await fs.writeFile(path.join(testDir, '.dir2txt.json'), JSON.stringify({
+      includeExtensions: ['.md'],
+      ignorePatterns: ['src/**', 'test/**']
+    }, null, 2));
+    await fs.writeFile(path.join(testDir, 'package.json'), JSON.stringify({
+      name: 'restricted-fixture',
+      description: 'Detects through restrictive pack config',
+      type: 'module',
+      scripts: {
+        test: 'jest'
+      }
+    }, null, 2));
+    await fs.writeFile(path.join(testDir, 'src/index.js'), 'export const answer = 42;\n');
+    await fs.writeFile(path.join(testDir, 'test/index.test.js'), 'test("works", () => {});\n');
+
+    const docs = await buildAgentDocs(testDir);
+
+    expect(docs.project.description).toBe('Detects through restrictive pack config');
+    expect(docs.project.languages).toContain('javascript');
+    expect(docs.project.hasTests).toBe(true);
+    expect(docs.agents).toContain('Description: Detects through restrictive pack config');
+    expect(docs.agents).toContain('Test files were detected');
   });
 
   test('writeAgentDocs refuses to overwrite existing AGENTS.md without force', async () => {

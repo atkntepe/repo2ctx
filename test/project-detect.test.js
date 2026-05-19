@@ -13,6 +13,7 @@ beforeEach(async () => {
   await fs.mkdir(path.join(testDir, 'test'), { recursive: true });
   await fs.writeFile(path.join(testDir, 'package.json'), JSON.stringify({
     name: 'fixture-app',
+    description: 'A fixture project',
     type: 'module',
     scripts: {
       test: 'jest'
@@ -43,6 +44,7 @@ describe('Project Detection', () => {
     const project = await detectProject(testDir);
 
     expect(project.name).toBe('fixture-app');
+    expect(project.description).toBe('A fixture project');
     expect(project.packageManager).toBe('npm');
     expect(project.moduleType).toBe('module');
     expect(project.scripts.test).toBe('jest');

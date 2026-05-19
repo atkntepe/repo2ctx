@@ -542,10 +542,14 @@ program
         return;
       }
 
-      await writeAgentDocs(process.cwd(), docs, {
+      const writtenPaths = await writeAgentDocs(process.cwd(), docs, {
         claude: options.claude,
         force: options.force
       });
+
+      for (const writtenPath of writtenPaths) {
+        console.log(`💾 Wrote ${path.basename(writtenPath)}`);
+      }
     } catch (error) {
       console.error('❌ Error generating agent docs:', error.message);
       if (process.env.DEBUG) {
