@@ -56,4 +56,20 @@ describe('Traverse Module', () => {
     expect(process.cwd()).toBe(originalCwd);
     expect(files).toEqual([path.join('src', 'index.js')]);
   });
+
+  test('can skip config-derived extension and depth filters', async () => {
+    await fs.writeFile(
+      path.join(testDir, '.dir2txt.json'),
+      JSON.stringify({
+        includeExtensions: ['.js'],
+        maxDepth: 1
+      })
+    );
+
+    const files = await getFiles({ useConfig: false });
+
+    expect(files).toContain('package.json');
+    expect(files).toContain(path.join('src', 'index.js'));
+    expect(files).toContain(path.join('src', 'readme.md'));
+  });
 });
