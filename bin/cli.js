@@ -92,6 +92,7 @@ import {
   groupFilesByFunction, 
   generateDependencyGraph 
 } from '../lib/relationships.js';
+import { buildBrief } from '../lib/context/brief.js';
 
 // Get package.json for version info
 const __filename = fileURLToPath(import.meta.url);
@@ -464,6 +465,34 @@ applyGenerationOptions(
     .command('pack')
     .description('Pack directory structure and files for LLM context')
 ).action((options, command) => runDirectoryGeneration(options, command));
+
+/**
+ * Brief command - generates compact repository metadata for AI agents
+ */
+program
+  .command('brief')
+  .description('Generate a compact repository brief for AI agents')
+  .option('--output <file>', 'Output to file instead of stdout')
+  .action(async (options) => {
+    try {
+      const { markdown } = await buildBrief();
+
+      if (options.output) {
+        const outputPath = path.resolve(options.output);
+        await fs.mkdir(path.dirname(outputPath), { recursive: true });
+        await fs.writeFile(outputPath, markdown, 'utf8');
+        return;
+      }
+
+      process.stdout.write(markdown);
+    } catch (error) {
+      console.error('❌ Error generating brief:', error.message);
+      if (process.env.DEBUG) {
+        console.error(error.stack);
+      }
+      process.exit(1);
+    }
+  });
 
 /**
  * Config command - creates default configuration
