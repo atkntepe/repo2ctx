@@ -1,191 +1,242 @@
 # repo2ctx
 
-`repo2ctx` prepares safe, task-focused repository context for AI coding agents.
+[![npm version](https://img.shields.io/npm/v/repo2ctx.svg)](https://www.npmjs.com/package/repo2ctx)
+[![Node.js 20+](https://img.shields.io/badge/Node.js-20%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+[![License: ISC](https://img.shields.io/badge/license-ISC-blue.svg)](LICENSE)
 
-It helps you give an agent the right amount of local project context before asking
-for implementation, debugging, review, or planning work. The default workflow is
-compact first: generate a brief, inspect the repo map, then create task-specific
-context only when you need more detail.
+Prepare safe, focused repository context for AI coding agents.
 
-Formerly `dir2txt`. The `dir2txt` binary remains available as a compatibility
-alias, so existing scripts can keep using `dir2txt run`, `dir2txt pack`, and the
-other supported commands.
+`repo2ctx` scans a local repository and produces compact briefs, navigation maps,
+task-oriented file shortlists, agent guidance, or complete context packs. It is
+designed for the moment before you ask an AI agent to implement, debug, review,
+or plan work in an unfamiliar codebase.
 
-## Install
+The project was previously published as `dir2txt`. The new package still installs
+a `dir2txt` command so existing scripts can keep working after migration.
+
+## Why repo2ctx?
+
+- **Start small:** inspect a brief or map before sending full file contents.
+- **Focus by task:** identify likely source, test, and configuration files from a
+  plain-language task description.
+- **Keep code local:** repository scanning and output generation run on your
+  machine without an AI API.
+- **Reduce accidental exposure:** common secrets are redacted and sensitive or
+  noisy paths are filtered by default.
+- **Support agent workflows:** generate an `AGENTS.md` file from detected project
+  metadata and scripts.
+- **Preserve existing usage:** `dir2txt` and `run` remain available as compatibility
+  aliases.
+
+## Requirements
+
+- Node.js 20 or newer
+
+## Installation
+
+Install the CLI globally:
 
 ```bash
-npm install -g repo2ctx
+npm install --global repo2ctx
+repo2ctx --version
 ```
 
-For local development from this repository:
+Or run it without a global installation:
 
 ```bash
-npm install
-node bin/cli.js --help
+npx repo2ctx brief
 ```
 
-## Quick Start
+Run commands from the root of the repository you want to inspect.
 
-Run these from the repository you want to summarize:
+## Quick start
 
 ```bash
+# Get a compact overview of the project
 repo2ctx brief
+
+# See important files grouped by role
 repo2ctx map
+
+# Find files likely to matter for a specific task
 repo2ctx context "fix watcher tests"
-repo2ctx agents
+
+# Preview generated agent guidance without writing a file
+repo2ctx agents --dry
+
+# Create a reviewable Markdown context pack with file contents
 repo2ctx pack --format markdown --output repo-context.md
 ```
 
-When working from a checkout of this repository, use `node bin/cli.js` in place
-of `repo2ctx`:
-
-```bash
-node bin/cli.js brief
-node bin/cli.js map
-node bin/cli.js context "fix watcher tests"
-node bin/cli.js agents --dry
-node bin/cli.js pack --format markdown --output repo-context.md
-```
+Start with `brief`, move to `map` or `context` when you need direction, and use
+`pack` only when the agent needs file contents.
 
 ## Commands
 
-| Command | Purpose |
+| Command | What it produces |
 | --- | --- |
-| `brief` | Print a compact repository brief for AI agents. |
-| `map` | Print a compact navigation map of important project files. |
-| `context "task"` | Print task-focused context selected for a specific request. |
-| `agents` | Generate `AGENTS.md` guidance for coding agents. Use `--dry` to preview it. |
-| `pack` | Pack directory structure and file contents for LLM context. |
-| `run` | Compatibility command for generating directory and file text output. |
+| `brief` | Project metadata, detected languages, scripts, tests, and key files. |
+| `map` | A compact file list grouped into source, tests, configuration, documentation, and other roles. Classification is heuristic. |
+| `context <task>` | A repository brief plus a shortlist of likely relevant files and the reason each file was selected. It does not include file contents. |
+| `agents` | An `AGENTS.md` file based on detected project facts. Add `--claude` to also create a `CLAUDE.md` wrapper. |
+| `pack` | Directory structure and file contents in text, Markdown, JSON, or XML. |
+| `run` | Compatibility alias for the original directory-to-text workflow. |
 
-## Safety Defaults
+Use `repo2ctx <command> --help` to see every option for a command.
 
-`repo2ctx` is local-first and applies safety defaults before content is emitted:
+### Write compact outputs to a file
 
-- Secret-like assignments such as API keys, tokens, passwords, private keys, and
-  database URLs are redacted by default.
-- Sensitive files such as `.env` files, private SSH keys, PEM files, and `.key`
-  files are replaced with redaction markers.
-- Common heavy or unsafe paths such as `node_modules/**` and `.git/**` are
-  skipped during traversal.
-
-Always review generated output before sharing it outside your machine or pasting
-it into an external AI service. Redaction is a safeguard, not a substitute for
-human review.
-
-## Typical Workflow
-
-Start with the smallest useful context:
+`brief`, `map`, and `context` print to standard output by default. Pass `--output`
+to write the result instead:
 
 ```bash
-repo2ctx brief
+repo2ctx brief --output repo-brief.md
+repo2ctx map --output repo-map.md
+repo2ctx context "review authentication flow" --output task-context.md
 ```
 
-Use the map when an agent needs orientation before editing:
+### Generate agent guidance
 
 ```bash
-repo2ctx map
-```
-
-Create focused context for a concrete task:
-
-```bash
-repo2ctx context "fix watcher tests"
-```
-
-Write agent guidance into the repository:
-
-```bash
-repo2ctx agents
-```
-
-Preview the generated guidance without writing files:
-
-```bash
+# Preview AGENTS.md
 repo2ctx agents --dry
+
+# Write AGENTS.md
+repo2ctx agents
+
+# Write AGENTS.md and a CLAUDE.md wrapper
+repo2ctx agents --claude
 ```
 
-Create a markdown context bundle for review or sharing:
+The command will not overwrite an existing `AGENTS.md` or `CLAUDE.md` unless you
+pass `--force`. Review generated guidance before committing it; `repo2ctx` reports
+detected facts but cannot infer every project convention.
+
+## Context packs
+
+`pack` is the full-content command. When neither `--output`, `--clipboard`, nor
+`--dry` is supplied, it writes `directory-output.txt` in the current directory.
 
 ```bash
-repo2ctx pack --format markdown --output repo-context.md
-```
-
-## Packing Options
-
-`pack` and `run` share the implemented generation options. Useful examples:
-
-```bash
-# Show only the file tree, without file contents
+# Show the file tree without file contents
 repo2ctx pack --dry
+
+# Write Markdown, JSON, or XML
+repo2ctx pack --format markdown --output repo-context.md
+repo2ctx pack --format json --output repo-context.json
+repo2ctx pack --format xml --output repo-context.xml
 
 # Copy generated context to the clipboard
 repo2ctx pack --clipboard
 
-# Limit included file types
-repo2ctx pack --extensions .js .md .json
+# Include only selected file extensions
+repo2ctx pack --extensions .js .md .json --output repo-context.txt
 
-# Add extra ignore patterns for this run
-repo2ctx pack --ignore "test/**" "dist/**"
+# Add ignore rules for this run
+repo2ctx pack --ignore "test/**" "dist/**" --output repo-context.txt
 
-# Search within files and include matching context
-repo2ctx pack --search "TODO|FIXME" --context 3
+# Search file contents with surrounding context
+repo2ctx pack --search "TODO|FIXME" --regex --context 3
 
-# Include files changed since a date
-repo2ctx pack --since "2026-05-01"
-
-# Generate JSON or XML instead of text/markdown
-repo2ctx pack --format json --output repo-context.json
-repo2ctx pack --format xml --output repo-context.xml
+# Limit files by modification date
+repo2ctx pack --since "2026-05-01" --output recent-context.txt
 ```
 
-The legacy `run` command remains available for existing `dir2txt` usage:
+Useful pack options include:
 
-```bash
-dir2txt run --dry
-dir2txt run --format markdown --output repo-context.md
-```
+| Option | Purpose |
+| --- | --- |
+| `--dry` | Print only the directory tree. |
+| `--output <file>` | Write output to a file. |
+| `--clipboard` | Copy output to the clipboard. |
+| `--format <format>` | Select `text`, `markdown`, `json`, or `xml`. |
+| `--extensions <ext...>` | Include only the listed extensions. |
+| `--ignore <patterns...>` | Add ignore patterns for the current run. |
+| `--max-size <bytes>` | Skip files above the supplied size. |
+| `--max-depth <depth>` | Limit directory traversal depth. |
+| `--search <pattern>` | Search within files instead of producing a full pack when no output target is set. |
+| `--since <date>` / `--before <date>` | Filter files by modification date. |
+| `--include-relationships` | Add heuristic import and export relationships. |
+| `--file-summaries` | Add pattern-based file-purpose summaries. |
+
+Relationship analysis and file summaries are heuristic. Treat them as navigation
+hints, not as a substitute for language-aware static analysis.
+
+## Safety defaults
+
+`repo2ctx` processes repositories locally. Before content is emitted, it applies
+the following safeguards:
+
+- Secret-like assignments such as API keys, tokens, passwords, private keys, and
+  database URLs are replaced with redaction markers.
+- Sensitive files such as dotenv files, private SSH keys, PEM files, and `.key`
+  files are replaced with clear redaction markers if encountered.
+- Common heavy or unsafe paths such as `node_modules/**` and `.git/**` are skipped.
+- Large files and binary content are filtered during normal traversal.
+
+Always review generated output before sharing it outside your machine. Pattern-based
+redaction reduces risk, but it cannot guarantee that every sensitive value will be
+recognized.
 
 ## Configuration
 
-Create a default `.dir2txt.json` configuration:
+`repo2ctx` continues to use `.dir2txt.json` so existing configuration files remain
+compatible.
 
 ```bash
+# Create the default configuration file
 repo2ctx config
-```
 
-Show current configuration and directory status:
+# Show or validate the current configuration
+repo2ctx config --show
+repo2ctx config --validate
 
-```bash
+# Show repository and configuration status
 repo2ctx status
-```
 
-Update ignore patterns or extension filters:
-
-```bash
+# Update ignore patterns or extension filters
 repo2ctx update --add "tmp/**"
 repo2ctx update --remove "dist/**"
 repo2ctx update --add-ext .go
 repo2ctx update --remove-ext .xml
-```
 
-List or apply built-in ignore templates:
-
-```bash
+# List or apply built-in ignore templates
 repo2ctx templates --list
 repo2ctx templates --apply node
 ```
 
+Pass `--noconfig` to `pack` or `run` when you want to ignore `.dir2txt.json` for
+one invocation.
+
+## Migrating from dir2txt
+
+The npm package moved from `dir2txt` to `repo2ctx`. Replace the old global package:
+
+```bash
+npm uninstall --global dir2txt
+npm install --global repo2ctx
+```
+
+After installing `repo2ctx`, both command names work:
+
+```bash
+repo2ctx pack --dry
+dir2txt run --dry
+```
+
+Existing `.dir2txt.json` files and common `dir2txt run` options remain supported.
+Use `repo2ctx` for new scripts and documentation.
+
 ## Development
 
 ```bash
+git clone https://github.com/atkntepe/repo2ctx.git
+cd repo2ctx
 npm install
 npm test
-node bin/cli.js brief
-node bin/cli.js map
-node bin/cli.js context "fix watcher tests"
+node bin/cli.js --help
 ```
 
 ## License
 
-ISC
+[ISC](LICENSE)
