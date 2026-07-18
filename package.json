@@ -4,8 +4,8 @@
   "description": "Prepare safe, task-focused repository context for AI coding agents",
   "main": "bin/cli.js",
   "bin": {
-    "repo2ctx": "./bin/cli.js",
-    "dir2txt": "./bin/cli.js"
+    "repo2ctx": "bin/cli.js",
+    "dir2txt": "bin/cli.js"
   },
   "scripts": {
     "test": "NODE_OPTIONS=\"--experimental-vm-modules\" jest",
